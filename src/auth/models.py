@@ -21,7 +21,7 @@ class UserInfo(Base):
 
     user: Mapped["User"] = relationship(back_populates="user_info")
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
-    favourite: Mapped[List[int]] = mapped_column(Integer, ForeignKey("project.id"))
+    # favourite: Mapped[List[int]] = mapped_column(Integer, ForeignKey("project.id"), nullable=True)
 
 
 class User(SQLAlchemyBaseUserTable[int], Base):
