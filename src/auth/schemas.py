@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 from fastapi_users import schemas
 
@@ -29,7 +29,7 @@ class AddUserInfo(BaseModel):
     is_designer: bool = True
     city: str
     description: str
-    avatar: str
+    favourite: Optional[List[int]]
 
 
 class UserUpdate(schemas.BaseUserUpdate):

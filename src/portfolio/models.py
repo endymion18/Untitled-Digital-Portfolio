@@ -10,7 +10,7 @@ class Project(Base):
     __tablename__ = "project"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     description: Mapped[str] = mapped_column(String(length=500), nullable=True)
     project_name: Mapped[str] = mapped_column(String(length=100), nullable=False)
 
@@ -23,7 +23,7 @@ class Image(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     file: Mapped[str] = mapped_column(String(length=1000), nullable=False)
-    project_id: Mapped[int] = mapped_column(Integer, ForeignKey("project.id"))
+    project_id: Mapped[int] = mapped_column(ForeignKey("project.id"))
     project: Mapped["Project"] = relationship(back_populates="image")
 
 
@@ -32,5 +32,3 @@ class Tag(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(length=100))
-
-
