@@ -15,7 +15,7 @@ class Project(Base):
     project_name: Mapped[str] = mapped_column(String(length=100), nullable=False)
 
     image: Mapped[List["Image"]] = relationship(back_populates="project")
-    tag: Mapped[List["Tag"]] = relationship()
+    # tag: Mapped[List["Tag"]] = relationship()
 
 
 class Image(Base):

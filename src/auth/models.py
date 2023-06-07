@@ -1,11 +1,11 @@
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
 
-from sqlalchemy import Integer, String, Boolean, ForeignKey
+from sqlalchemy import Integer, String, Boolean, ForeignKey, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base
 
-from typing import List
+from typing import List, Optional
 
 
 class UserInfo(Base):
@@ -17,7 +17,7 @@ class UserInfo(Base):
     is_designer: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     city: Mapped[str] = mapped_column(String(length=150), nullable=True)
     description: Mapped[str] = mapped_column(String(length=350), nullable=True)
-    # favourite: Mapped[List[int]] = mapped_column(Integer, nullable=True)
+    # favourite: Mapped[Optional[List[int]]] = mapped_column(ARRAY(Integer), nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="user_info")
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))

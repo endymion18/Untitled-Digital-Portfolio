@@ -2,10 +2,8 @@ from pydantic import BaseModel
 
 
 class CreateProject(BaseModel):
-    id: int
-    user_id: int
+    name: str
     description: str
-    project_name: str
 
 
 class AddImage(BaseModel):

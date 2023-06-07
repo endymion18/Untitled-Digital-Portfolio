@@ -29,7 +29,7 @@ class AddUserInfo(BaseModel):
     is_designer: bool = True
     city: str
     description: str
-    favourite: Optional[List[int]]
+    # favourite: Optional[List[int]]
 
 
 class UserUpdate(schemas.BaseUserUpdate):
