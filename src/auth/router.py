@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.auth import current_user
 from src.database import async_session_maker, get_async_session
 from src.auth.models import UserInfo, User, Avatar
-from src.auth.schemas import AddUserInfo
+from src.auth.schemas import AddUserInfo, ChangeUserInfo
+from src.portfolio.router import change_info
 
 users_router = APIRouter(
     tags=["UserInfo"],
@@ -20,8 +21,9 @@ avatar_router = APIRouter(
 
 
 @users_router.post("/addInfo")
-async def add_user_info(user_info: AddUserInfo, session: AsyncSession = Depends(get_async_session)):
-    stmt = insert(UserInfo).values(**user_info.dict())
+async def add_user_info(user_info: AddUserInfo, session: AsyncSession = Depends(get_async_session),
+                        user: User = Depends(current_user)):
+    stmt = insert(UserInfo).values(**user_info.dict(), user_id=user.id)
     await session.execute(stmt)
     await session.commit()
     return {"status": "success"}
@@ -29,13 +31,22 @@ async def add_user_info(user_info: AddUserInfo, session: AsyncSession = Depends(
 
 
 @users_router.put("/changeInfo")
-async def change_user_info(user_info: AddUserInfo, session: AsyncSession = Depends(get_async_session)):
+async def change_user_info(user_info: ChangeUserInfo, session: AsyncSession = Depends(get_async_session),
+                           user: User = Depends(current_user)):
+    user_id = user.id
+    info = await session.execute(select(UserInfo).where(UserInfo.user_id == user_id))
+    info = info.scalar()
+    info = await change_info(info, user_info)
     stmt = update(UserInfo). \
-        where(UserInfo.user_id == user_info.user_id). \
-        values(**user_info.dict())
+        where(UserInfo.user_id == user_id). \
+        values(first_name=info.first_name,
+               last_name=info.last_name,
+               is_designer=info.is_designer,
+               city=info.city,
+               description=info.description)
     await session.execute(stmt)
     await session.commit()
-    return {"status": "success"}
+    return info
     # return user_info.dict()
 
 

@@ -23,13 +23,20 @@ class UserCreate(schemas.BaseUserCreate):
 
 
 class AddUserInfo(BaseModel):
-    user_id: int
     first_name: str
     last_name: str
     is_designer: bool = True
     city: str
     description: str
     # favourite: Optional[List[int]]
+
+
+class ChangeUserInfo(BaseModel):
+    first_name: Optional[str]
+    last_name: Optional[str]
+    is_designer: Optional[bool] = True
+    city: Optional[str]
+    description: Optional[str]
 
 
 class UserUpdate(schemas.BaseUserUpdate):

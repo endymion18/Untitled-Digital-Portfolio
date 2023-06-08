@@ -1,17 +1,18 @@
+import datetime
 import os
 from typing import Union, Optional
-
+import random
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 
-from sqlalchemy import insert, select, delete, update, desc
+from sqlalchemy import insert, select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.auth import current_user
-from src.database import async_session_maker, get_async_session
+from src.database import get_async_session
 from src.auth.models import UserInfo, User
 from src.auth.schemas import AddUserInfo
 from src.portfolio.models import Project, Image
-from src.portfolio.schemas import CreateProject
+from src.portfolio.schemas import CreateProject, UpdateProject
 
 portfolio_router = APIRouter(
     prefix="/portfolio",
@@ -19,17 +20,76 @@ portfolio_router = APIRouter(
 )
 
 
-@portfolio_router.post("/addProject")
+@portfolio_router.post("/project")
 async def add_new_project(project_info: CreateProject, session: AsyncSession = Depends(get_async_session),
                           user: User = Depends(current_user)):
     stmt = insert(Project).values(user_id=user.id, description=project_info.description,
-                                  project_name=project_info.name)
+                                  name=project_info.name)
     await session.execute(stmt)
     await session.commit()
     return {"status": "success"}
 
 
-@portfolio_router.post("/addImage")
+@portfolio_router.put("/project")
+async def change_project(project_info: UpdateProject, project_id: int,
+                         session: AsyncSession = Depends(get_async_session),
+                         user: User = Depends(current_user)):
+    cur_project = await session.execute(select(Project).where(Project.id == project_id))
+    cur_project = cur_project.scalar()
+    cur_project = await change_info(cur_project, project_info)
+    stmt = update(Project).where(Project.id == project_id) \
+        .values(user_id=user.id, description=cur_project.description,
+                name=cur_project.name)
+    await session.execute(stmt)
+    await session.commit()
+    return cur_project
+
+
+@portfolio_router.get("/project")
+async def get_project(project_id: int, session: AsyncSession = Depends(get_async_session)):
+    project = await session.execute(select(Project).where(Project.id == project_id))
+    project = project.scalar()
+    return project
+
+
+@portfolio_router.get("/project/all")
+async def get_current_user_projects(user: User = Depends(current_user),
+                                    session: AsyncSession = Depends(get_async_session)):
+    project = await session.execute(select(Project).where(Project.user_id == user.id))
+    project = project.scalars().all()
+    return project
+
+
+@portfolio_router.get("/project/random")
+async def get_random_projects(count: int, seed: str,
+                              session: AsyncSession = Depends(get_async_session)):
+    projects = await session.execute(select(Project))
+    projects = projects.scalars().all()
+    project_count = len(projects)
+    count = project_count if count > project_count else count
+    random.seed(seed)
+    random_projects = []
+    while len(random_projects) < count:
+        r = random.choice(projects)
+        if not random_projects.__contains__(r):
+            random_projects.append(r)
+    return random_projects
+
+
+@portfolio_router.delete("/project")
+async def delete_project(project_id: int, session: AsyncSession = Depends(get_async_session)):
+    images = await session.execute(select(Image.id).where(Image.project_id == project_id))
+    images = images.scalars().all()
+    for i in images:
+        await delete_image(i, session)
+    await session.execute(delete(Image).where(Image.project_id == project_id))
+    stmt = delete(Project).where(Project.id == project_id)
+    await session.execute(stmt)
+    await session.commit()
+    return {"status": "success"}
+
+
+@portfolio_router.post("/image")
 async def add_image_to_project(project_id: int, image: UploadFile = File(...),
                                session: AsyncSession = Depends(get_async_session)):
     image_id = await session.execute(select(Image).where(Image.project_id == project_id))
@@ -41,7 +101,14 @@ async def add_image_to_project(project_id: int, image: UploadFile = File(...),
     return {"Successfully uploaded. Filepath": image_id}
 
 
-@portfolio_router.delete("/deleteImage")
+@portfolio_router.get("/image/all")
+async def get_images_by_project(project_id: int, session: AsyncSession = Depends(get_async_session)):
+    images = await session.execute(select(Image).where(Image.project_id == project_id))
+    images = images.scalars().all()
+    return images
+
+
+@portfolio_router.delete("/image")
 async def delete_image_from_project(image_id: int,
                                     session: AsyncSession = Depends(get_async_session)):
     filepath = await delete_image(image_id, session)
@@ -74,3 +141,10 @@ async def delete_image(image_id, session):
     except Exception as e:
         print(e)
     return filepath
+
+
+async def change_info(old, new):
+    for attr, value in new:
+        if value:
+            setattr(old, attr, value)
+    return old

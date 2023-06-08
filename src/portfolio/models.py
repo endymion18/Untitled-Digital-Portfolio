@@ -12,7 +12,7 @@ class Project(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     description: Mapped[str] = mapped_column(String(length=500), nullable=True)
-    project_name: Mapped[str] = mapped_column(String(length=100), nullable=False)
+    name: Mapped[str] = mapped_column(String(length=100), nullable=False)
 
     image: Mapped[List["Image"]] = relationship(back_populates="project")
     # tag: Mapped[List["Tag"]] = relationship()
