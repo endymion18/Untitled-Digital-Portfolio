@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.auth.router import users_router, avatar_router
 from src.auth.auth import auth_backend, fastapi_users
@@ -7,6 +8,18 @@ from src.portfolio.router import portfolio_router
 
 app = FastAPI(
     title="Untitled Digital Portfolio"
+)
+
+origins = [
+    "http://127.0.0.1:3000"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(
