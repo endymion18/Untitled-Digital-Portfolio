@@ -1,6 +1,5 @@
-import datetime
 import os
-from typing import Union, Optional
+
 import random
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 
@@ -10,13 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.auth import current_user
 from src.database import get_async_session
 from src.auth.models import UserInfo, User
-from src.auth.schemas import AddUserInfo
 from src.portfolio.models import Project, Image
 from src.portfolio.schemas import CreateProject, UpdateProject
+from src.services.models import Comment
 
 portfolio_router = APIRouter(
     prefix="/portfolio",
-    tags=["portfolio"]
+    tags=["Portfolio"]
 )
 
 
@@ -24,10 +23,10 @@ portfolio_router = APIRouter(
 async def add_new_project(project_info: CreateProject, session: AsyncSession = Depends(get_async_session),
                           user: User = Depends(current_user)):
     stmt = insert(Project).values(user_id=user.id, description=project_info.description,
-                                  name=project_info.name)
-    await session.execute(stmt)
+                                  name=project_info.name).returning(Project)
+    result = await session.execute(stmt)
     await session.commit()
-    return {"status": "success"}
+    return result.scalar()
 
 
 @portfolio_router.put("/project")
@@ -83,6 +82,7 @@ async def delete_project(project_id: int, session: AsyncSession = Depends(get_as
     for i in images:
         await delete_image(i, session)
     await session.execute(delete(Image).where(Image.project_id == project_id))
+    await session.execute(delete(Comment).where(Comment.project_id == project_id))
     stmt = delete(Project).where(Project.id == project_id)
     await session.execute(stmt)
     await session.commit()

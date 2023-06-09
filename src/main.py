@@ -5,6 +5,7 @@ from src.auth.router import users_router, avatar_router
 from src.auth.auth import auth_backend, fastapi_users
 from src.auth.schemas import UserRead, UserCreate
 from src.portfolio.router import portfolio_router
+from src.services.router import services_router
 
 app = FastAPI(
     title="Untitled Digital Portfolio"
@@ -37,6 +38,7 @@ app.include_router(
 app.include_router(users_router)
 app.include_router(avatar_router)
 app.include_router(portfolio_router)
+app.include_router(services_router)
 # @app.on_event("startup")
 # async def startup_event():
 #     add_tags()
