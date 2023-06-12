@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from sqlalchemy import insert, select, delete, update, func
+from sqlalchemy import insert, select, delete, update, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.auth import current_user
 from src.database import get_async_session
 from src.auth.models import User
 from src.portfolio.models import Project
-from src.services.models import Comment
+from src.services.models import Comment, Favourite
 
 services_router = APIRouter(
     prefix="/services",
@@ -94,3 +94,33 @@ async def dislike(project_id: int, session: AsyncSession = Depends(get_async_ses
     result = await session.execute(stmt)
     await session.commit()
     return result.scalar()
+
+
+@services_router.post("/favourite", tags=["favourite"])
+async def add_project_to_favourite(project_id: int, session: AsyncSession = Depends(get_async_session),
+                                   user: User = Depends(current_user)):
+    stmt = insert(Favourite).values(user_id=user.id, project_id=project_id).returning(Favourite)
+    result = await session.execute(stmt)
+    await session.commit()
+    return result.scalar()
+
+
+@services_router.get("/favourite", tags=["favourite"])
+async def get_user_favourites(session: AsyncSession = Depends(get_async_session),
+                              user: User = Depends(current_user)):
+    stmt = await session.execute(select(Favourite).where(Favourite.user_id == user.id))
+    stmt = stmt.scalars().all()
+    return stmt
+
+
+@services_router.delete("/favourite", tags=["favourite"])
+async def delete_project_from_favourite(project_id: int, session: AsyncSession = Depends(get_async_session),
+                                        user: User = Depends(current_user)):
+    stmt = delete(Favourite).where(
+        and_(
+            Favourite.project_id == project_id,
+            Favourite.user_id == user.id
+        ))
+    await session.execute(stmt)
+    await session.commit()
+    return {"status": "success"}

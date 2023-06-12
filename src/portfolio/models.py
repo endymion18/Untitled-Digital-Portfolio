@@ -32,3 +32,10 @@ class Tag(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(length=100))
+
+
+class ProjectTags(Base):
+    __tablename__ = "projects_tags"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("project.id"))
+    tag_id: Mapped[int] = mapped_column(ForeignKey("tag.id"))

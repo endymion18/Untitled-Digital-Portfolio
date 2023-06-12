@@ -3,15 +3,15 @@ import os
 import random
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 
-from sqlalchemy import insert, select, delete, update
+from sqlalchemy import insert, select, delete, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.auth import current_user
 from src.database import get_async_session
 from src.auth.models import UserInfo, User
-from src.portfolio.models import Project, Image
+from src.portfolio.models import Project, Image, Tag, ProjectTags
 from src.portfolio.schemas import CreateProject, UpdateProject
-from src.services.models import Comment
+from src.services.models import Comment, Favourite
 
 portfolio_router = APIRouter(
     prefix="/portfolio",
@@ -83,6 +83,8 @@ async def delete_project(project_id: int, session: AsyncSession = Depends(get_as
         await delete_image(i, session)
     await session.execute(delete(Image).where(Image.project_id == project_id))
     await session.execute(delete(Comment).where(Comment.project_id == project_id))
+    await session.execute(delete(Favourite).where(Favourite.project_id == project_id))
+    await session.execute(delete(ProjectTags).where(ProjectTags.project_id == project_id))
     stmt = delete(Project).where(Project.id == project_id)
     await session.execute(stmt)
     await session.commit()
@@ -118,6 +120,43 @@ async def delete_image_from_project(image_id: int,
     return {"Successfully deleted.": filepath}
 
 
+@portfolio_router.post("/tag", tags=["Tags"])
+async def add_tag(tag: str, project_id: int, session: AsyncSession = Depends(get_async_session),
+                  user: User = Depends(current_user)):
+    tag_id = await session.execute(select(Tag.id).where(Tag.name == tag))
+    tag_id = tag_id.scalar()
+    if tag_id is None:
+        tag_stmt = insert(Tag).values(name=tag)
+        await session.execute(tag_stmt)
+        await session.commit()
+        tag_id = await session.execute(select(Tag.id).where(Tag.name == tag))
+        tag_id = tag_id.scalar()
+    stmt = insert(ProjectTags).values(tag_id=tag_id, project_id=project_id)
+    await session.execute(stmt)
+    await session.commit()
+    return {"status": "successful"}
+
+
+@portfolio_router.get("/tag", tags=["Tags"])
+async def get_project_tags(project_id: int, session: AsyncSession = Depends(get_async_session)):
+    tags_ids = await session.execute(select(ProjectTags.tag_id).where(ProjectTags.project_id == project_id))
+    tags_ids = tags_ids.scalars().all()
+    tags = await session.execute(select(Tag).where(Tag.id.in_(tags_ids)))
+    return tags.scalars().all()
+
+
+@portfolio_router.delete("/tag", tags=["Tags"])
+async def delete_tag_from_project(tag_id: int, project_id: int, session: AsyncSession = Depends(get_async_session)):
+    stmt = delete(ProjectTags).where(
+        and_(
+            ProjectTags.tag_id == tag_id,
+            ProjectTags.project_id == project_id
+        )).returning(ProjectTags)
+    await session.execute(stmt)
+    await session.commit()
+    return {"status": "success"}
+
+
 async def upload_image(file, project_id):
     ext = os.path.splitext(file.filename)[1]
     filename = f'{project_id}' + ext
@@ -148,3 +187,11 @@ async def change_info(old, new):
         if value:
             setattr(old, attr, value)
     return old
+
+# async def add_tags(session):
+#     with open('src/portfolio/tags.txt') as f:
+#         for line in f:
+#             tag = await session.execute(select(Tag.name).where(Tag.name == line))
+#             if tag.scalar() is not None:
+#                 await session.execute(insert(Tag).values(name=f))
+#                 await session.commit()
